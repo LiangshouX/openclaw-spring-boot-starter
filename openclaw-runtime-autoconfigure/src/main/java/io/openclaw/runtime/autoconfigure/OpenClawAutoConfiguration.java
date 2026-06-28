@@ -19,6 +19,7 @@ import io.openclaw.runtime.skill.scanner.SkillMetadataBuilder;
 import io.openclaw.runtime.skill.scanner.SkillScanner;
 import io.openclaw.runtime.autoconfigure.runtime.DefaultOpenClawRuntime;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -246,15 +247,20 @@ public class OpenClawAutoConfiguration {
         return new DefaultOpenClawRuntime(sessionManager, openClawClient, skillRegistry, eventPublisher);
     }
 
-    /** 创建 {@link OpenClawShutdownHandler} Bean，用于优雅关闭运行时资源。 */
+    /**
+     * 创建 {@link OpenClawShutdownHandler} Bean，用于在应用关闭时优雅地释放运行时资源。
+     * {@code SkillRegistrar} 为可选依赖——当 {@code openclaw.auto-register-skill=false} 时该 Bean 不存在，
+     * 关闭处理器会跳过技能注销步骤。
+     */
     @Bean
     @ConditionalOnMissingBean
-    public OpenClawShutdownHandler openClawShutdownHandler(SessionManager sessionManager,
-                                                            SkillRegistry skillRegistry,
-                                                            io.openclaw.runtime.skill.registry.SkillRegistrar skillRegistrar,
-                                                            HeartbeatManager heartbeatManager,
-                                                            EventPublisher eventPublisher) {
-        return new OpenClawShutdownHandler(sessionManager, skillRegistry, skillRegistrar,
-                heartbeatManager, eventPublisher);
+    public OpenClawShutdownHandler openClawShutdownHandler(
+            SessionManager sessionManager,
+            SkillRegistry skillRegistry,
+            ObjectProvider<io.openclaw.runtime.skill.registry.SkillRegistrar> skillRegistrarProvider,
+            HeartbeatManager heartbeatManager,
+            EventPublisher eventPublisher) {
+        return new OpenClawShutdownHandler(sessionManager, skillRegistry,
+                skillRegistrarProvider.getIfAvailable(), heartbeatManager, eventPublisher);
     }
 }

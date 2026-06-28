@@ -58,13 +58,15 @@ public class OpenClawShutdownHandler implements DisposableBean {
             }
         }
 
-        // 注销技能
-        List<String> skillNames = skillRegistry.getAll().stream()
-                .map(SkillMetadata::getDefinition)
-                .map(d -> d.getName())
-                .collect(Collectors.toList());
-        if (!skillNames.isEmpty()) {
-            skillRegistrar.unregisterFromOpenClaw(skillNames);
+        // 注销技能（仅当 SkillRegistrar 可用时）
+        if (skillRegistrar != null) {
+            List<String> skillNames = skillRegistry.getAll().stream()
+                    .map(SkillMetadata::getDefinition)
+                    .map(d -> d.getName())
+                    .collect(Collectors.toList());
+            if (!skillNames.isEmpty()) {
+                skillRegistrar.unregisterFromOpenClaw(skillNames);
+            }
         }
 
         // 关闭心跳

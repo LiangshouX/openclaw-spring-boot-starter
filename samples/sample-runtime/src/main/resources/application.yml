@@ -1,0 +1,14 @@
+openclaw:
+  endpoint: http://localhost:8080
+  token: demo-token
+  workspace: demo-workspace
+  callback:
+    path: /openclaw/callback
+    enabled: true
+  timeout: 30s
+  auto-register-skill: false
+  log-request: true
+  log-response: true
+
+server:
+  port: 8081

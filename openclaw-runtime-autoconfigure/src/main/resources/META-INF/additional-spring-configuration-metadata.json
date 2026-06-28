@@ -1,0 +1,76 @@
+{
+  "groups": [
+    {
+      "name": "openclaw",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.callback",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$CallbackProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.retry",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$RetryProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.heartbeat",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$HeartbeatProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.stream",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$StreamProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.trace",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$TraceProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "openclaw.endpoint",
+      "type": "java.lang.String",
+      "description": "OpenClaw Gateway endpoint URL."
+    },
+    {
+      "name": "openclaw.token",
+      "type": "java.lang.String",
+      "description": "Authentication token for OpenClaw API."
+    },
+    {
+      "name": "openclaw.workspace",
+      "type": "java.lang.String",
+      "description": "Default workspace ID."
+    },
+    {
+      "name": "openclaw.timeout",
+      "type": "java.time.Duration",
+      "description": "Request timeout.",
+      "defaultValue": "30s"
+    },
+    {
+      "name": "openclaw.auto-register-skill",
+      "type": "java.lang.Boolean",
+      "description": "Whether to automatically register skills on startup.",
+      "defaultValue": true
+    },
+    {
+      "name": "openclaw.log-request",
+      "type": "java.lang.Boolean",
+      "description": "Whether to log HTTP requests.",
+      "defaultValue": false
+    },
+    {
+      "name": "openclaw.log-response",
+      "type": "java.lang.Boolean",
+      "description": "Whether to log HTTP responses.",
+      "defaultValue": false
+    }
+  ],
+  "hints": []
+}

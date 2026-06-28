@@ -1,0 +1,4 @@
+io.openclaw.runtime.autoconfigure.OpenClawAutoConfiguration
+io.openclaw.runtime.autoconfigure.OpenClawCallbackAutoConfiguration
+io.openclaw.runtime.autoconfigure.OpenClawSkillAutoConfiguration
+io.openclaw.runtime.autoconfigure.trace.TraceAutoConfiguration

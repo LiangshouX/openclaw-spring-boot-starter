@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.openclaw.runtime</groupId>
+        <artifactId>openclaw-runtime-sdk</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>openclaw-runtime-event</artifactId>
+    <name>OpenClaw Runtime Event</name>
+    <description>Event framework for OpenClaw Runtime SDK</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.openclaw.runtime</groupId>
+            <artifactId>openclaw-runtime-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

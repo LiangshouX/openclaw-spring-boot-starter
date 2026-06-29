@@ -6,6 +6,7 @@ import io.openclaw.runtime.client.http.EventClient;
 import io.openclaw.runtime.client.http.SessionHttpClient;
 import io.openclaw.runtime.client.http.TaskClient;
 import io.openclaw.runtime.client.http.UploadClient;
+import io.openclaw.runtime.client.websocket.OpenClawWebSocketClient;
 import lombok.Builder;
 import lombok.Data;
 
@@ -20,4 +21,5 @@ public class OpenClawClient {
     private EventClient eventClient;
     private UploadClient uploadClient;
     private ArtifactClient artifactClient;
+    private OpenClawWebSocketClient webSocketClient;
 }

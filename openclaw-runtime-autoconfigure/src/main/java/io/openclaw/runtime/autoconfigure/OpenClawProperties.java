@@ -72,6 +72,44 @@ public class OpenClawProperties {
      */
     private boolean logResponse = false;
 
+    /**
+     * WebSocket 连接配置。
+     */
+    private WebSocketProperties websocket = new WebSocketProperties();
+
+    @Data
+    public static class WebSocketProperties {
+        /**
+         * WebSocket 端点 URL（默认从 HTTP endpoint 推导：http→ws、https→wss）。
+         */
+        private String endpoint;
+
+        /**
+         * 协议版本。
+         */
+        private int protocolVersion = 4;
+
+        /**
+         * 握手连接超时时间。
+         */
+        private Duration connectTimeout = Duration.ofSeconds(15);
+
+        /**
+         * RPC 请求超时时间。
+         */
+        private Duration requestTimeout = Duration.ofSeconds(30);
+
+        /**
+         * 是否在启动时自动连接 WebSocket。
+         */
+        private boolean autoConnect = true;
+
+        /**
+         * 最大重连次数。
+         */
+        private int maxReconnectAttempts = 10;
+    }
+
     @Data
     public static class CallbackProperties {
         /**

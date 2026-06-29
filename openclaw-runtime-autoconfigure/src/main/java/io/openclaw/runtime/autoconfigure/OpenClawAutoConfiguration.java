@@ -19,7 +19,10 @@ import io.openclaw.runtime.skill.scanner.SkillMetadataBuilder;
 import io.openclaw.runtime.skill.scanner.SkillScanner;
 import io.openclaw.runtime.autoconfigure.runtime.DefaultOpenClawRuntime;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -40,6 +43,8 @@ import java.util.List;
 @EnableConfigurationProperties(OpenClawProperties.class)
 @ConditionalOnProperty(prefix = "openclaw", name = "endpoint")
 public class OpenClawAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenClawAutoConfiguration.class);
 
     /** 创建支持 Java Time 模块的 Jackson {@link ObjectMapper} Bean。 */
     @Bean
@@ -74,32 +79,41 @@ public class OpenClawAutoConfiguration {
         return new LoggingInterceptor();
     }
 
-    /** 创建用于向 OpenClaw 发送聊天消息的 {@link ChatClient} Bean。 */
+    /**
+     * 创建用于向 OpenClaw 发送聊天消息的 {@link ChatClient} Bean。
+     * 通过 HTTP {@code /v1/chat/completions} 端点发送请求（shared-secret auth 自动获得完整 operator 权限）。
+     */
     @Bean
     @ConditionalOnMissingBean
-    public ChatClient chatClient(WebClient openClawWebClient) {
-        return new ChatClient(openClawWebClient);
+    public ChatClient chatClient(WebClient openClawWebClient, ObjectMapper objectMapper) {
+        return new ChatClient(openClawWebClient, objectMapper);
     }
 
     /** 创建用于管理 OpenClaw 任务的 {@link TaskClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public TaskClient taskClient(WebClient openClawWebClient) {
-        return new TaskClient(openClawWebClient);
+    public TaskClient taskClient(WebClient openClawWebClient,
+                                 OpenClawWebSocketClient openClawWebSocketClient,
+                                 ObjectMapper objectMapper) {
+        return new TaskClient(openClawWebClient, openClawWebSocketClient, objectMapper);
     }
 
-    /** 创建用于 HTTP 会话操作的 {@link SessionHttpClient} Bean。 */
+    /** 创建用于会话操作的 {@link SessionHttpClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SessionHttpClient sessionHttpClient(WebClient openClawWebClient) {
-        return new SessionHttpClient(openClawWebClient);
+    public SessionHttpClient sessionHttpClient(WebClient openClawWebClient,
+                                               OpenClawWebSocketClient openClawWebSocketClient,
+                                               ObjectMapper objectMapper) {
+        return new SessionHttpClient(openClawWebClient, openClawWebSocketClient, objectMapper);
     }
 
     /** 创建用于向 OpenClaw 提交事件的 {@link EventClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public EventClient eventClient(WebClient openClawWebClient) {
-        return new EventClient(openClawWebClient);
+    public EventClient eventClient(WebClient openClawWebClient,
+                                   OpenClawWebSocketClient openClawWebSocketClient,
+                                   ObjectMapper objectMapper) {
+        return new EventClient(openClawWebClient, openClawWebSocketClient, objectMapper);
     }
 
     /** 创建用于向 OpenClaw 上传文件的 {@link UploadClient} Bean。 */
@@ -112,18 +126,35 @@ public class OpenClawAutoConfiguration {
     /** 创建用于管理 OpenClaw 制品的 {@link ArtifactClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public ArtifactClient artifactClient(WebClient openClawWebClient) {
-        return new ArtifactClient(openClawWebClient);
+    public ArtifactClient artifactClient(WebClient openClawWebClient,
+                                         OpenClawWebSocketClient openClawWebSocketClient,
+                                         ObjectMapper objectMapper) {
+        return new ArtifactClient(openClawWebClient, openClawWebSocketClient, objectMapper);
     }
 
     /** 创建用于 WebSocket 连接 OpenClaw 的 {@link OpenClawWebSocketClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public OpenClawWebSocketClient openClawWebSocketClient() {
-        return new OpenClawWebSocketClient();
+    public OpenClawWebSocketClient openClawWebSocketClient(OpenClawProperties properties,
+                                                           ObjectMapper objectMapper) {
+        String wsEndpoint = properties.getWebsocket().getEndpoint();
+        if (wsEndpoint == null || wsEndpoint.isBlank()) {
+            // Derive WS endpoint from HTTP endpoint: http→ws, https→wss
+            wsEndpoint = properties.getEndpoint()
+                    .replaceFirst("^https://", "wss://")
+                    .replaceFirst("^http://", "ws://");
+        }
+        return new OpenClawWebSocketClient(
+                wsEndpoint,
+                properties.getToken(),
+                objectMapper,
+                properties.getWebsocket().getConnectTimeout(),
+                properties.getWebsocket().getRequestTimeout(),
+                properties.getWebsocket().getProtocolVersion(),
+                properties.getWebsocket().getMaxReconnectAttempts());
     }
 
-    /** 创建 {@link OpenClawClient} 门面 Bean，聚合所有领域专用的 HTTP 客户端。 */
+    /** 创建 {@link OpenClawClient} 门面 Bean，聚合所有领域专用的 HTTP/WebSocket 客户端。 */
     @Bean
     @ConditionalOnMissingBean
     public OpenClawClient openClawClient(ChatClient chatClient,
@@ -131,7 +162,8 @@ public class OpenClawAutoConfiguration {
                                          SessionHttpClient sessionHttpClient,
                                          EventClient eventClient,
                                          UploadClient uploadClient,
-                                         ArtifactClient artifactClient) {
+                                         ArtifactClient artifactClient,
+                                         OpenClawWebSocketClient openClawWebSocketClient) {
         return OpenClawClient.builder()
                 .chatClient(chatClient)
                 .taskClient(taskClient)
@@ -139,6 +171,7 @@ public class OpenClawAutoConfiguration {
                 .eventClient(eventClient)
                 .uploadClient(uploadClient)
                 .artifactClient(artifactClient)
+                .webSocketClient(openClawWebSocketClient)
                 .build();
     }
 
@@ -262,5 +295,24 @@ public class OpenClawAutoConfiguration {
             EventPublisher eventPublisher) {
         return new OpenClawShutdownHandler(sessionManager, skillRegistry,
                 skillRegistrarProvider.getIfAvailable(), heartbeatManager, eventPublisher);
+    }
+
+    /**
+     * 在所有单例 Bean 初始化完成后自动建立 WebSocket 连接。
+     * 当 {@code openclaw.websocket.auto-connect=true}（默认值）时激活。
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "openClawWebSocketInitializer")
+    public SmartInitializingSingleton openClawWebSocketInitializer(
+            OpenClawWebSocketClient webSocketClient,
+            OpenClawProperties properties) {
+        return () -> {
+            if (properties.getWebsocket().isAutoConnect()) {
+                webSocketClient.connect()
+                        .doOnSuccess(v -> log.info("WebSocket connected to gateway"))
+                        .doOnError(e -> log.warn("WebSocket auto-connect failed: {}", e.getMessage()))
+                        .subscribe();
+            }
+        };
     }
 }

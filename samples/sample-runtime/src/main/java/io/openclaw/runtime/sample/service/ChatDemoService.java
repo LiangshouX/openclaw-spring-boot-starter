@@ -31,7 +31,9 @@ public class ChatDemoService {
                 .message(message)
                 .mode(StreamMode.SYNC)
                 .build();
-        return runtime.chat(request);
+        ChatResponse res = runtime.chat(request);
+
+        return res;
     }
 
     /**

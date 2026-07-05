@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * 聊天客户端，通过 HTTP {@code POST /v1/chat/completions} 与 OpenClaw Gateway 进行聊天操作。
@@ -36,6 +37,9 @@ import java.util.*;
  * <p>
  * 请求格式遵循 OpenAI Chat Completions 规范，使用 {@code model: "openclaw/default"}
  * 路由到 Gateway 的默认 agent。
+ * <p>
+ * 当设置了 {@link #setToolProvider(Supplier)} 时，每次聊天请求会自动携带
+ * OpenAI 兼容的 {@code tools} 数组，使 Gateway 的 LLM 能发现并调用 SDK 注册的工具。
  */
 public class ChatClient {
 
@@ -45,6 +49,7 @@ public class ChatClient {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private Supplier<JsonNode> toolProvider;
 
     public ChatClient(WebClient webClient) {
         this(webClient, new ObjectMapper());
@@ -64,6 +69,18 @@ public class ChatClient {
                       io.openclaw.runtime.client.websocket.OpenClawWebSocketClient wsClient,
                       ObjectMapper objectMapper) {
         this(webClient, objectMapper);
+    }
+
+    /**
+     * 设置工具定义提供者。
+     * <p>
+     * 提供者应返回 OpenAI 兼容的 {@code tools} 数组格式的 JsonNode。
+     * 设置后，每次聊天请求会自动在请求体中包含这些工具定义。
+     *
+     * @param toolProvider 返回 tools 数组 JsonNode 的 Supplier，或 null 以禁用
+     */
+    public void setToolProvider(Supplier<JsonNode> toolProvider) {
+        this.toolProvider = toolProvider;
     }
 
     private void requireWebClient() {
@@ -174,6 +191,19 @@ public class ChatClient {
             body.put("user", sessionKey);
         }
 
+        // Inject tool definitions into the request body if a tool provider is set
+        if (toolProvider != null) {
+            try {
+                JsonNode tools = toolProvider.get();
+                if (tools != null && tools.isArray() && !tools.isEmpty()) {
+                    body.put("tools", tools);
+                    log.debug("Injected {} tool definitions into chat request", tools.size());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to obtain tool definitions for chat request: {}", e.getMessage());
+            }
+        }
+
         return body;
     }
 
@@ -227,7 +257,7 @@ public class ChatClient {
                 }
                 toolCalls.add(ChatResponse.ToolCall.builder()
                         .id(tc.path("id").asText(""))
-                        .skillName(fn.path("name").asText(""))
+                        .toolName(fn.path("name").asText(""))
                         .arguments(argNode)
                         .build());
             }

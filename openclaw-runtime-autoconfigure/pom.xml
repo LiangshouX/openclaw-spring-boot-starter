@@ -31,6 +31,10 @@
         </dependency>
         <dependency>
             <groupId>io.openclaw.runtime</groupId>
+            <artifactId>openclaw-runtime-tool</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.openclaw.runtime</groupId>
             <artifactId>openclaw-runtime-skill</artifactId>
         </dependency>
         <dependency>

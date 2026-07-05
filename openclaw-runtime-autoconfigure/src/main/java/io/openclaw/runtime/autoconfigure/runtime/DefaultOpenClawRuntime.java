@@ -10,7 +10,7 @@ import io.openclaw.runtime.api.listener.RuntimeListener;
 import io.openclaw.runtime.client.OpenClawClient;
 import io.openclaw.runtime.event.EventPublisher;
 import io.openclaw.runtime.session.SessionManager;
-import io.openclaw.runtime.skill.registry.SkillRegistry;
+import io.openclaw.runtime.tool.registry.ToolRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,16 +26,16 @@ public class DefaultOpenClawRuntime implements OpenClawRuntime {
 
     private final SessionManager sessionManager;
     private final OpenClawClient openClawClient;
-    private final SkillRegistry skillRegistry;
+    private final ToolRegistry toolRegistry;
     private final EventPublisher eventPublisher;
 
     public DefaultOpenClawRuntime(SessionManager sessionManager,
                                    OpenClawClient openClawClient,
-                                   SkillRegistry skillRegistry,
+                                   ToolRegistry toolRegistry,
                                    EventPublisher eventPublisher) {
         this.sessionManager = sessionManager;
         this.openClawClient = openClawClient;
-        this.skillRegistry = skillRegistry;
+        this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
 
@@ -85,10 +85,10 @@ public class DefaultOpenClawRuntime implements OpenClawRuntime {
 
     /** {@inheritDoc} */
     @Override
-    public void registerSkill() {
-        log.info("Manual skill registration triggered");
-        var manifest = skillRegistry.buildManifest();
-        log.info("Built skill manifest with {} skills", manifest.getSkills().size());
+    public void registerTool() {
+        log.info("Manual tool registration triggered");
+        var manifest = toolRegistry.buildManifest();
+        log.info("Built tool manifest with {} tools", manifest.getTools().size());
     }
 
     /** {@inheritDoc} */

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.openclaw.runtime.api.dto.ChatRequest;
 import io.openclaw.runtime.api.dto.ChatResponse;
 import io.openclaw.runtime.api.dto.RuntimeSession;
-import io.openclaw.runtime.api.dto.SkillResult;
+import io.openclaw.runtime.api.dto.ToolResult;
 import io.openclaw.runtime.api.event.RuntimeEvent;
 
 /** 运行时转换器门面，委托各领域专用转换器实现层间 DTO 转换。 */
@@ -12,16 +12,16 @@ public class RuntimeConverter {
 
     private final ChatConverter chatConverter;
     private final SessionConverter sessionConverter;
-    private final SkillConverter skillConverter;
+    private final ToolConverter toolConverter;
     private final EventConverter eventConverter;
 
     public RuntimeConverter(ChatConverter chatConverter,
                             SessionConverter sessionConverter,
-                            SkillConverter skillConverter,
+                            ToolConverter toolConverter,
                             EventConverter eventConverter) {
         this.chatConverter = chatConverter;
         this.sessionConverter = sessionConverter;
-        this.skillConverter = skillConverter;
+        this.toolConverter = toolConverter;
         this.eventConverter = eventConverter;
     }
 
@@ -66,13 +66,13 @@ public class RuntimeConverter {
     }
 
     /**
-     * 将 OpenClaw 技能结果的原始 JSON 转换为业务 {@link SkillResult}。
+     * 将 OpenClaw 工具结果的原始 JSON 转换为业务 {@link ToolResult}。
      *
-     * @param openClawResult 来自 OpenClaw Gateway 的原始技能结果 JSON
-     * @return 转换后的 {@link SkillResult}
+     * @param openClawResult 来自 OpenClaw Gateway 的原始工具结果 JSON
+     * @return 转换后的 {@link ToolResult}
      */
-    public SkillResult toBusinessSkillResult(JsonNode openClawResult) {
-        return skillConverter.toBusinessSkillResult(openClawResult);
+    public ToolResult toBusinessToolResult(JsonNode openClawResult) {
+        return toolConverter.toBusinessToolResult(openClawResult);
     }
 
     /**

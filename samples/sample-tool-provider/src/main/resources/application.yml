@@ -1,0 +1,10 @@
+openclaw:
+  endpoint: http://localhost:1300/
+  token: demo-token
+  workspace: main
+  auto-register-tool: true
+  log-request: true
+  log-response: true
+
+server:
+  port: 8082

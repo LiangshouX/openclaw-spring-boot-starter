@@ -13,10 +13,10 @@ import io.openclaw.runtime.event.EventPublisher;
 import io.openclaw.runtime.session.HeartbeatManager;
 import io.openclaw.runtime.session.SessionLifecycleManager;
 import io.openclaw.runtime.session.SessionManager;
-import io.openclaw.runtime.skill.dispatcher.SkillDispatcher;
-import io.openclaw.runtime.skill.registry.SkillRegistry;
-import io.openclaw.runtime.skill.scanner.SkillMetadataBuilder;
-import io.openclaw.runtime.skill.scanner.SkillScanner;
+import io.openclaw.runtime.tool.dispatcher.ToolDispatcher;
+import io.openclaw.runtime.tool.registry.ToolRegistry;
+import io.openclaw.runtime.tool.scanner.ToolMetadataBuilder;
+import io.openclaw.runtime.tool.scanner.ToolScanner;
 import io.openclaw.runtime.autoconfigure.runtime.DefaultOpenClawRuntime;
 
 import org.slf4j.Logger;
@@ -203,33 +203,33 @@ public class OpenClawAutoConfiguration {
         return new EventPublisher();
     }
 
-    /** 创建用于从注解构建技能元数据的 {@link SkillMetadataBuilder} Bean。 */
+    /** 创建用于从注解构建工具元数据的 {@link ToolMetadataBuilder} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SkillMetadataBuilder skillMetadataBuilder() {
-        return new SkillMetadataBuilder();
+    public ToolMetadataBuilder toolMetadataBuilder() {
+        return new ToolMetadataBuilder();
     }
 
-    /** 创建用于在应用上下文中发现注解技能的 {@link SkillScanner} Bean。 */
+    /** 创建用于在应用上下文中发现注解工具的 {@link ToolScanner} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SkillScanner skillScanner(SkillMetadataBuilder skillMetadataBuilder) {
-        return new SkillScanner(skillMetadataBuilder);
+    public ToolScanner toolScanner(ToolMetadataBuilder toolMetadataBuilder) {
+        return new ToolScanner(toolMetadataBuilder);
     }
 
-    /** 创建用于持有已发现技能定义的 {@link SkillRegistry} Bean。 */
+    /** 创建用于持有已发现工具定义的 {@link ToolRegistry} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SkillRegistry skillRegistry() {
-        return new SkillRegistry();
+    public ToolRegistry toolRegistry() {
+        return new ToolRegistry();
     }
 
-    /** 创建用于调用技能并执行生命周期拦截器的 {@link SkillDispatcher} Bean。 */
+    /** 创建用于调用工具并执行生命周期拦截器的 {@link ToolDispatcher} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SkillDispatcher skillDispatcher(SkillRegistry skillRegistry,
-                                           List<LifecycleInterceptor> interceptors) {
-        return new SkillDispatcher(skillRegistry, interceptors);
+    public ToolDispatcher toolDispatcher(ToolRegistry toolRegistry,
+                                         List<LifecycleInterceptor> interceptors) {
+        return new ToolDispatcher(toolRegistry, interceptors);
     }
 
     /** 创建用于聊天 DTO 转换的 {@link ChatConverter} Bean。 */
@@ -246,11 +246,11 @@ public class OpenClawAutoConfiguration {
         return new SessionConverter();
     }
 
-    /** 创建用于技能 DTO 转换的 {@link SkillConverter} Bean。 */
+    /** 创建用于工具 DTO 转换的 {@link ToolConverter} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public SkillConverter skillConverter() {
-        return new SkillConverter();
+    public ToolConverter toolConverter() {
+        return new ToolConverter();
     }
 
     /** 创建用于事件 DTO 转换的 {@link EventConverter} Bean。 */
@@ -265,9 +265,9 @@ public class OpenClawAutoConfiguration {
     @ConditionalOnMissingBean
     public RuntimeConverter runtimeConverter(ChatConverter chatConverter,
                                              SessionConverter sessionConverter,
-                                             SkillConverter skillConverter,
+                                             ToolConverter toolConverter,
                                              EventConverter eventConverter) {
-        return new RuntimeConverter(chatConverter, sessionConverter, skillConverter, eventConverter);
+        return new RuntimeConverter(chatConverter, sessionConverter, toolConverter, eventConverter);
     }
 
     /** 创建 {@link OpenClawRuntime} Bean，作为运行时操作的主入口。 */
@@ -275,26 +275,26 @@ public class OpenClawAutoConfiguration {
     @ConditionalOnMissingBean
     public OpenClawRuntime openClawRuntime(SessionManager sessionManager,
                                            OpenClawClient openClawClient,
-                                           SkillRegistry skillRegistry,
+                                           ToolRegistry toolRegistry,
                                            EventPublisher eventPublisher) {
-        return new DefaultOpenClawRuntime(sessionManager, openClawClient, skillRegistry, eventPublisher);
+        return new DefaultOpenClawRuntime(sessionManager, openClawClient, toolRegistry, eventPublisher);
     }
 
     /**
      * 创建 {@link OpenClawShutdownHandler} Bean，用于在应用关闭时优雅地释放运行时资源。
-     * {@code SkillRegistrar} 为可选依赖——当 {@code openclaw.auto-register-skill=false} 时该 Bean 不存在，
-     * 关闭处理器会跳过技能注销步骤。
+     * {@code ToolRegistrar} 为可选依赖——当 {@code openclaw.auto-register-tool=false} 时该 Bean 不存在，
+     * 关闭处理器会跳过工具注销步骤。
      */
     @Bean
     @ConditionalOnMissingBean
     public OpenClawShutdownHandler openClawShutdownHandler(
             SessionManager sessionManager,
-            SkillRegistry skillRegistry,
-            ObjectProvider<io.openclaw.runtime.skill.registry.SkillRegistrar> skillRegistrarProvider,
+            ToolRegistry toolRegistry,
+            ObjectProvider<io.openclaw.runtime.tool.registry.ToolRegistrar> toolRegistrarProvider,
             HeartbeatManager heartbeatManager,
             EventPublisher eventPublisher) {
-        return new OpenClawShutdownHandler(sessionManager, skillRegistry,
-                skillRegistrarProvider.getIfAvailable(), heartbeatManager, eventPublisher);
+        return new OpenClawShutdownHandler(sessionManager, toolRegistry,
+                toolRegistrarProvider.getIfAvailable(), heartbeatManager, eventPublisher);
     }
 
     /**

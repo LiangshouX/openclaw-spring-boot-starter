@@ -6,7 +6,7 @@ openclaw:
     path: /openclaw/callback
     enabled: true
   timeout: 30s
-  auto-register-skill: false
+  auto-register-tool: false
   log-request: true
   log-response: true
 

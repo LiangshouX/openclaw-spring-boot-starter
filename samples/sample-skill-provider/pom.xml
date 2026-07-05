@@ -13,13 +13,17 @@
     </parent>
 
     <artifactId>sample-skill-provider</artifactId>
-    <name>Sample - OpenClaw Skill Provider</name>
-    <description>Sample application demonstrating OpenClaw Skill development with auto-discovery</description>
+    <name>Sample - OpenClaw Skill (SKILL.md) Provider</name>
+    <description>Sample application demonstrating OpenClaw Skill (SKILL.md) loading and management</description>
 
     <dependencies>
         <dependency>
             <groupId>io.openclaw.runtime</groupId>
             <artifactId>openclaw-runtime-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.openclaw.runtime</groupId>
+            <artifactId>openclaw-runtime-skill</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

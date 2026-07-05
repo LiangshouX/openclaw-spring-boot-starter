@@ -1,10 +1,15 @@
 openclaw:
-  endpoint: http://localhost:8080
+  endpoint: http://localhost:1300/
   token: demo-token
-  workspace: demo-workspace
+  workspace: main
+  # Disable tool auto-registration for this skill-focused demo
+  auto-register-tool: false
+  # Enable skill auto-registration (requires skills.install.allowUploadedArchives on Gateway)
   auto-register-skill: true
-  log-request: true
-  log-response: true
+  skill:
+    # Configure skill directories to scan for SKILL.md files
+    directories:
+      - src/main/resources/skills
 
 server:
-  port: 8082
+  port: 8081

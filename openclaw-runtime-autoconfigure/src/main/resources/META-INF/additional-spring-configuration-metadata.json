@@ -29,6 +29,11 @@
       "name": "openclaw.trace",
       "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$TraceProperties",
       "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
+    },
+    {
+      "name": "openclaw.skill",
+      "type": "io.openclaw.runtime.autoconfigure.OpenClawProperties$SkillProperties",
+      "sourceType": "io.openclaw.runtime.autoconfigure.OpenClawProperties"
     }
   ],
   "properties": [
@@ -54,10 +59,21 @@
       "defaultValue": "30s"
     },
     {
+      "name": "openclaw.auto-register-tool",
+      "type": "java.lang.Boolean",
+      "description": "Whether to automatically register tools on startup.",
+      "defaultValue": true
+    },
+    {
       "name": "openclaw.auto-register-skill",
       "type": "java.lang.Boolean",
-      "description": "Whether to automatically register skills on startup.",
-      "defaultValue": true
+      "description": "Whether to automatically register Skills (SKILL.md) to Gateway on startup. Requires 'skills.install.allowUploadedArchives: true' on the Gateway.",
+      "defaultValue": false
+    },
+    {
+      "name": "openclaw.skill.directories",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Additional directories to scan for SKILL.md files."
     },
     {
       "name": "openclaw.log-request",

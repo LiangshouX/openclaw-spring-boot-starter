@@ -39,9 +39,9 @@ public class ChatResponse {
 
         /** 此工具调用的唯一标识符。 */
         private String id;
-        /** 要调用的技能名称。 */
-        private String skillName;
-        /** 传递给技能的参数。 */
+        /** 要调用的工具名称。 */
+        private String toolName;
+        /** 传递给工具的参数。 */
         private JsonNode arguments;
     }
 }

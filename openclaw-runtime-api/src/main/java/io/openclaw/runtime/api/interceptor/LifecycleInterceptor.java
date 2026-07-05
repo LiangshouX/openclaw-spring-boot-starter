@@ -3,7 +3,7 @@ package io.openclaw.runtime.api.interceptor;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.openclaw.runtime.api.dto.ChatRequest;
 import io.openclaw.runtime.api.dto.ChatResponse;
-import io.openclaw.runtime.api.dto.SkillResult;
+import io.openclaw.runtime.api.dto.ToolResult;
 
 /**
  * 用于拦截 OpenClaw Runtime 生命周期事件的拦截器接口。
@@ -17,17 +17,23 @@ public interface LifecycleInterceptor {
     /** 聊天响应接收后调用。 */
     default void afterResponse(ChatResponse response) {}
 
-    /** 技能注册前调用。 */
+    /** 工具注册前调用。 */
+    default void beforeRegisterTool(String toolName) {}
+
+    /** 工具注册后调用。 */
+    default void afterRegisterTool(String toolName) {}
+
+    /** Skill 注册前调用。 */
     default void beforeRegisterSkill(String skillName) {}
 
-    /** 技能注册后调用。 */
+    /** Skill 注册后调用。 */
     default void afterRegisterSkill(String skillName) {}
 
     /** 工具调用执行前调用。 */
-    default void beforeToolCall(String skillName, JsonNode arguments) {}
+    default void beforeToolCall(String toolName, JsonNode arguments) {}
 
     /** 工具调用完成后调用。 */
-    default void afterToolCall(String skillName, SkillResult result) {}
+    default void afterToolCall(String toolName, ToolResult result) {}
 
     /** 回调处理前调用。 */
     default void beforeCallback(String callbackType, JsonNode payload) {}

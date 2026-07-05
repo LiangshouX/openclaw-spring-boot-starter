@@ -5,9 +5,9 @@ import io.openclaw.runtime.api.event.RuntimeStoppedEvent;
 import io.openclaw.runtime.event.EventPublisher;
 import io.openclaw.runtime.session.HeartbeatManager;
 import io.openclaw.runtime.session.SessionManager;
-import io.openclaw.runtime.skill.model.SkillMetadata;
-import io.openclaw.runtime.skill.registry.SkillRegistrar;
-import io.openclaw.runtime.skill.registry.SkillRegistry;
+import io.openclaw.runtime.tool.model.ToolMetadata;
+import io.openclaw.runtime.tool.registry.ToolRegistrar;
+import io.openclaw.runtime.tool.registry.ToolRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,26 +18,26 @@ import java.util.stream.Collectors;
 
 /**
  * 处理 OpenClaw Runtime 的优雅关闭。
- * 关闭会话、注销技能，并发布 RuntimeStoppedEvent。
+ * 关闭会话、注销工具，并发布 RuntimeStoppedEvent。
  */
 public class OpenClawShutdownHandler implements DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(OpenClawShutdownHandler.class);
 
     private final SessionManager sessionManager;
-    private final SkillRegistry skillRegistry;
-    private final SkillRegistrar skillRegistrar;
+    private final ToolRegistry toolRegistry;
+    private final ToolRegistrar toolRegistrar;
     private final HeartbeatManager heartbeatManager;
     private final EventPublisher eventPublisher;
 
     public OpenClawShutdownHandler(SessionManager sessionManager,
-                                    SkillRegistry skillRegistry,
-                                    SkillRegistrar skillRegistrar,
+                                    ToolRegistry toolRegistry,
+                                    ToolRegistrar toolRegistrar,
                                     HeartbeatManager heartbeatManager,
                                     EventPublisher eventPublisher) {
         this.sessionManager = sessionManager;
-        this.skillRegistry = skillRegistry;
-        this.skillRegistrar = skillRegistrar;
+        this.toolRegistry = toolRegistry;
+        this.toolRegistrar = toolRegistrar;
         this.heartbeatManager = heartbeatManager;
         this.eventPublisher = eventPublisher;
     }
@@ -58,14 +58,14 @@ public class OpenClawShutdownHandler implements DisposableBean {
             }
         }
 
-        // 注销技能（仅当 SkillRegistrar 可用时）
-        if (skillRegistrar != null) {
-            List<String> skillNames = skillRegistry.getAll().stream()
-                    .map(SkillMetadata::getDefinition)
+        // 注销工具（仅当 ToolRegistrar 可用时）
+        if (toolRegistrar != null) {
+            List<String> toolNames = toolRegistry.getAll().stream()
+                    .map(ToolMetadata::getDefinition)
                     .map(d -> d.getName())
                     .collect(Collectors.toList());
-            if (!skillNames.isEmpty()) {
-                skillRegistrar.unregisterFromOpenClaw(skillNames);
+            if (!toolNames.isEmpty()) {
+                toolRegistrar.unregisterFromOpenClaw(toolNames);
             }
         }
 

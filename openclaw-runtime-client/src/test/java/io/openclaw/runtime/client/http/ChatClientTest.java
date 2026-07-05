@@ -113,7 +113,7 @@ class ChatClientTest {
 
         assertNotNull(response);
         assertEquals(1, response.getToolCalls().size());
-        assertEquals("search", response.getToolCalls().get(0).getSkillName());
+        assertEquals("search", response.getToolCalls().get(0).getToolName());
         assertEquals("tc-1", response.getToolCalls().get(0).getId());
         assertEquals("tool_calls", response.getMetadata().get("finish_reason"));
     }

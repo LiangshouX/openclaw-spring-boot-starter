@@ -24,12 +24,14 @@
         <module>openclaw-runtime-api</module>
         <module>openclaw-runtime-client</module>
         <module>openclaw-runtime-session</module>
+        <module>openclaw-runtime-tool</module>
         <module>openclaw-runtime-skill</module>
         <module>openclaw-runtime-event</module>
         <module>openclaw-runtime-converter</module>
         <module>openclaw-runtime-autoconfigure</module>
         <module>openclaw-runtime-starter</module>
         <module>samples/sample-runtime</module>
+        <module>samples/sample-tool-provider</module>
         <module>samples/sample-skill-provider</module>
     </modules>
 
@@ -58,6 +60,11 @@
             <dependency>
                 <groupId>io.openclaw.runtime</groupId>
                 <artifactId>openclaw-runtime-session</artifactId>
+                <version>${openclaw.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.openclaw.runtime</groupId>
+                <artifactId>openclaw-runtime-tool</artifactId>
                 <version>${openclaw.version}</version>
             </dependency>
             <dependency>

@@ -10,7 +10,7 @@ import reactor.core.publisher.Flux;
 
 /**
  * OpenClaw Runtime 的核心入口接口。
- * 提供同步和流式聊天、会话管理、技能注册和事件监听等方法。
+ * 提供同步和流式聊天、会话管理、工具注册和事件监听等方法。
  */
 public interface OpenClawRuntime {
 
@@ -53,9 +53,9 @@ public interface OpenClawRuntime {
     void closeSession(String sessionId);
 
     /**
-     * 手动触发向 OpenClaw 的技能注册。
+     * 手动触发向 OpenClaw 的工具注册。
      */
-    void registerSkill();
+    void registerTool();
 
     /**
      * 注册运行时事件监听器。

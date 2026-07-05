@@ -53,9 +53,21 @@ public class OpenClawProperties {
     private StreamProperties stream = new StreamProperties();
 
     /**
-     * 是否在启动时自动注册技能。
+     * 是否在启动时自动注册工具。
      */
-    private boolean autoRegisterSkill = true;
+    private boolean autoRegisterTool = true;
+
+    /**
+     * 是否在启动时自动注册 Skill（SKILL.md）到 Gateway。
+     * <p>
+     * 启用此功能需要 Gateway 配置 {@code skills.install.allowUploadedArchives: true}。
+     */
+    private boolean autoRegisterSkill = false;
+
+    /**
+     * Skill 配置。
+     */
+    private SkillProperties skill = new SkillProperties();
 
     /**
      * 链路追踪配置。
@@ -173,5 +185,16 @@ public class OpenClawProperties {
          * 追踪数据导出器类型。
          */
         private String exporter = "otel";
+    }
+
+    @Data
+    public static class SkillProperties {
+        /**
+         * 额外的 Skill 目录列表，用于扫描 SKILL.md 文件。
+         * <p>
+         * 路径可以是绝对路径或相对于工作目录的相对路径。
+         * 默认从 {@code classpath:skills/} 加载。
+         */
+        private java.util.List<String> directories;
     }
 }

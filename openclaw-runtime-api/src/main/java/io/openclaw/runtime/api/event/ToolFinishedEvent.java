@@ -1,6 +1,6 @@
 package io.openclaw.runtime.api.event;
 
-import io.openclaw.runtime.api.dto.SkillResult;
+import io.openclaw.runtime.api.dto.ToolResult;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 public class ToolFinishedEvent extends RuntimeEvent {
 
     private String toolCallId;
-    private String skillName;
-    private SkillResult result;
+    private String toolName;
+    private ToolResult result;
 }

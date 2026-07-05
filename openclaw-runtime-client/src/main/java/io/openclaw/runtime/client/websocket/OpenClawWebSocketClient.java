@@ -327,9 +327,12 @@ public class OpenClawWebSocketClient {
         clientInfo.put("platform", "java");
         clientInfo.put("mode", "cli");
 
-        // Role and scopes
+        // Role and scopes — include operator.admin for tool/skill management
         connectParams.put("role", "operator");
-        connectParams.putArray("scopes").add("operator.read").add("operator.write");
+        connectParams.putArray("scopes")
+                .add("operator.read")
+                .add("operator.write")
+                .add("operator.admin");
 
         // Empty capabilities
         connectParams.putArray("caps");

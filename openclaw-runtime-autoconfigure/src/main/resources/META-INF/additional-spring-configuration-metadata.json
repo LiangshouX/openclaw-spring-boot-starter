@@ -53,6 +53,11 @@
       "description": "Default workspace ID."
     },
     {
+      "name": "openclaw.agent-id",
+      "type": "java.lang.String",
+      "description": "Default Agent ID for routing chat requests. Format: agent identifier, e.g. 'my-agent'. When not set, uses the Gateway's default agent. Can be overridden per-request via ChatRequest.agentId."
+    },
+    {
       "name": "openclaw.timeout",
       "type": "java.time.Duration",
       "description": "Request timeout.",

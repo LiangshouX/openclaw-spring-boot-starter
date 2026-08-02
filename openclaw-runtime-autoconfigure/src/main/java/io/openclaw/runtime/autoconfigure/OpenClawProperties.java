@@ -28,6 +28,17 @@ public class OpenClawProperties {
     private String workspace;
 
     /**
+     * 默认对话 Agent ID。
+     * <p>
+     * 用于路由聊天请求到指定的 Agent。
+     * 格式为 Agent 标识符，例如 {@code "my-agent"}。
+     * 未设置时使用 Gateway 的默认 Agent。
+     * <p>
+     * 也可以在每次请求时通过 {@code ChatRequest.agentId} 覆盖此配置。
+     */
+    private String agentId;
+
+    /**
      * 回调配置。
      */
     private CallbackProperties callback = new CallbackProperties();

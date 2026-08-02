@@ -82,11 +82,16 @@ public class OpenClawAutoConfiguration {
     /**
      * 创建用于向 OpenClaw 发送聊天消息的 {@link ChatClient} Bean。
      * 通过 HTTP {@code /v1/chat/completions} 端点发送请求（shared-secret auth 自动获得完整 operator 权限）。
+     * <p>
+     * 如果配置了 {@code openclaw.agent-id}，则设置为默认 Agent ID 用于路由请求。
      */
     @Bean
     @ConditionalOnMissingBean
-    public ChatClient chatClient(WebClient openClawWebClient, ObjectMapper objectMapper) {
-        return new ChatClient(openClawWebClient, objectMapper);
+    public ChatClient chatClient(WebClient openClawWebClient, ObjectMapper objectMapper,
+                                 OpenClawProperties properties) {
+        ChatClient client = new ChatClient(openClawWebClient, objectMapper);
+        client.setDefaultAgentId(properties.getAgentId());
+        return client;
     }
 
     /** 创建用于管理 OpenClaw 任务的 {@link TaskClient} Bean。 */

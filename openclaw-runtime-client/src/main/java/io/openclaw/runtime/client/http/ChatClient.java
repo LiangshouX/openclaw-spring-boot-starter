@@ -50,6 +50,7 @@ public class ChatClient {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private Supplier<JsonNode> toolProvider;
+    private String defaultAgentId;
 
     public ChatClient(WebClient webClient) {
         this(webClient, new ObjectMapper());
@@ -61,7 +62,29 @@ public class ChatClient {
     }
 
     /**
+     * 设置默认的 Agent ID。
+     * <p>
+     * 用于路由聊天请求到指定的 Agent。
+     * 请求级别的 {@code ChatRequest.agentId} 会覆盖此默认值。
+     *
+     * @param agentId Agent 标识符，或 null 以使用 Gateway 默认 Agent
+     */
+    public void setDefaultAgentId(String agentId) {
+        this.defaultAgentId = agentId;
+    }
+
+    /**
+     * 获取当前配置的默认 Agent ID。
+     *
+     * @return Agent 标识符，或 null 表示使用 Gateway 默认 Agent
+     */
+    public String getDefaultAgentId() {
+        return defaultAgentId;
+    }
+
+    /**
      * 向后兼容的构造函数。
+     *
      * @deprecated WebSocket 参数不再需要，请使用 {@link #ChatClient(WebClient, ObjectMapper)}
      */
     @Deprecated
@@ -175,7 +198,14 @@ public class ChatClient {
 
     private Map<String, Object> buildRequestBody(ChatRequest request, boolean stream) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", DEFAULT_MODEL);
+
+        // Resolve agent ID: request-level > default config > fallback
+        String agentId = resolveAgentId(request);
+        String model = agentId != null && !agentId.isBlank()
+                ? "openclaw/" + agentId
+                : DEFAULT_MODEL;
+        body.put("model", model);
+
         body.put("stream", stream);
 
         List<Map<String, String>> messages = new ArrayList<>();
@@ -208,7 +238,7 @@ public class ChatClient {
     }
 
     private void addSessionHeaders(org.springframework.http.HttpHeaders headers,
-                                    ChatRequest request) {
+                                   ChatRequest request) {
         String sessionKey = resolveSessionKey(request);
         if (sessionKey != null) {
             headers.set("x-openclaw-session-key", sessionKey);
@@ -223,6 +253,21 @@ public class ChatClient {
             return request.getConversationId();
         }
         return null;
+    }
+
+    /**
+     * 解析 Agent ID：请求级别 > 默认配置。
+     *
+     * @param request 聊天请求
+     * @return 解析后的 Agent ID，或 null 表示使用 Gateway 默认 Agent
+     */
+    private String resolveAgentId(ChatRequest request) {
+        // Request-level agentId takes precedence
+        if (request.getAgentId() != null && !request.getAgentId().isBlank()) {
+            return request.getAgentId();
+        }
+        // Fall back to default config
+        return defaultAgentId;
     }
 
     private ChatResponse parseChatResponse(JsonNode response, ChatRequest request) {

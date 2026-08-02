@@ -2,6 +2,8 @@ openclaw:
   endpoint: http://localhost:8080
   token: demo-token
   workspace: demo-workspace
+  # 可选：指定默认对话 Agent ID，用于路由聊天请求到特定 Agent
+  # agent-id: my-agent
   callback:
     path: /openclaw/callback
     enabled: true

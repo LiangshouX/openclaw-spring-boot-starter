@@ -1,6 +1,8 @@
 # OpenClaw Spring Boot Starter
 
-一个 Spring Boot Starter，提供与 **OpenClaw Runtime** 的无缝集成 — 一个 AI 驱动的运行时平台，支持聊天、任务执行和技能编排。该 SDK 自动配置 HTTP/WebSocket 客户端、会话生命周期、事件分发、技能注册和回调处理，使业务应用能够以最少的样板代码开始与 OpenClaw 交互。
+一个 Spring Boot Starter，提供与 **OpenClaw Runtime** 的无缝集成 — 一个 AI 驱动的运行时平台，支持聊天、任务执行和技能编排。该
+SDK 自动配置 HTTP/WebSocket 客户端、会话生命周期、事件分发、技能注册和回调处理，使业务应用能够以最少的样板代码开始与
+OpenClaw 交互。
 
 ## 功能特性
 
@@ -17,26 +19,22 @@
 
 ## 架构
 
-
-
 ![](.\docs\imgs\Structure.png)
-
-
 
 ## 模块说明
 
-| 模块 | 描述 |
-|--------|-------------|
-| `openclaw-runtime-api` | 公共 API 接口、DTO、事件、监听器和异常 |
-| `openclaw-runtime-client` | 用于 OpenClaw Gateway 通信的 HTTP 和 WebSocket 客户端 |
-| `openclaw-runtime-session` | 会话生命周期管理（创建、恢复、关闭、心跳） |
-| `openclaw-runtime-skill` | 技能框架 — 注解扫描、注册表、调度器、JSON Schema 生成 |
-| `openclaw-runtime-event` | 事件发布、回调分发和 Webhook 管理 |
-| `openclaw-runtime-converter` | JSON、运行时和 OpenClaw 表示之间的 DTO 转换层 |
-| `openclaw-runtime-autoconfigure` | Spring Boot 自动配置、回调控制器、生命周期初始化器、关闭处理器 |
-| `openclaw-runtime-starter` | Spring Boot Starter — 业务应用所需的唯一依赖 |
-| `samples/sample-runtime` | 示例应用，演示聊天、流式传输和会话管理 |
-| `samples/sample-skill-provider` | 示例应用，演示技能自动发现和注册 |
+| 模块                               | 描述                                           |
+|----------------------------------|----------------------------------------------|
+| `openclaw-runtime-api`           | 公共 API 接口、DTO、事件、监听器和异常                      |
+| `openclaw-runtime-client`        | 用于 OpenClaw Gateway 通信的 HTTP 和 WebSocket 客户端 |
+| `openclaw-runtime-session`       | 会话生命周期管理（创建、恢复、关闭、心跳）                        |
+| `openclaw-runtime-skill`         | 技能框架 — 注解扫描、注册表、调度器、JSON Schema 生成           |
+| `openclaw-runtime-event`         | 事件发布、回调分发和 Webhook 管理                        |
+| `openclaw-runtime-converter`     | JSON、运行时和 OpenClaw 表示之间的 DTO 转换层             |
+| `openclaw-runtime-autoconfigure` | Spring Boot 自动配置、回调控制器、生命周期初始化器、关闭处理器        |
+| `openclaw-runtime-starter`       | Spring Boot Starter — 业务应用所需的唯一依赖            |
+| `samples/sample-runtime`         | 示例应用，演示聊天、流式传输和会话管理                          |
+| `samples/sample-skill-provider`  | 示例应用，演示技能自动发现和注册                             |
 
 ## 快速开始
 
@@ -45,6 +43,7 @@
 将 starter 添加到你的 `pom.xml`：
 
 ```xml
+
 <dependency>
     <groupId>io.openclaw.runtime</groupId>
     <artifactId>openclaw-runtime-starter</artifactId>
@@ -62,6 +61,8 @@ openclaw:
   token: your-api-token
   # 可选：默认工作空间 ID
   workspace: default-workspace
+  # 可选：默认对话 Agent ID（用于路由请求到指定 Agent）
+  # agent-id: my-agent
   # 可选：是否在启动时自动注册技能（默认：true）
   auto-register-skill: true
   # 可选：请求超时时间（默认：30s）
@@ -131,6 +132,20 @@ public class MyChatService {
         return runtime.chat(request);
     }
 
+    /**
+     * 使用指定 Agent 进行聊天。
+     * 请求级别的 agentId 会覆盖全局配置 openclaw.agent-id。
+     */
+    public ChatResponse chatWithAgent(String sessionId, String message, String agentId) {
+        ChatRequest request = ChatRequest.builder()
+                .sessionId(sessionId)
+                .message(message)
+                .mode(StreamMode.SYNC)
+                .agentId(agentId)  // 指定对话 Agent
+                .build();
+        return runtime.chat(request);
+    }
+
     public RuntimeSession startSession() {
         return runtime.createSession();
     }
@@ -145,7 +160,8 @@ public class MyChatService {
 
 ### 定义技能
 
-使用 `@OpenClawSkill` 注解标注任意类并实现 `Skill` 接口。SDK 会自动发现它、根据其结构生成 JSON Schema，并在启动时注册到 OpenClaw Gateway。
+使用 `@OpenClawSkill` 注解标注任意类并实现 `Skill` 接口。SDK 会自动发现它、根据其结构生成 JSON Schema，并在启动时注册到
+OpenClaw Gateway。
 
 ```java
 import com.fasterxml.jackson.databind.JsonNode;
@@ -216,25 +232,26 @@ public class MyRuntimeListener implements RuntimeListener {
 
 ## 配置参考
 
-| 配置项 | 类型 | 默认值 | 描述 |
-|----------|------|---------|-------------|
-| `openclaw.endpoint` | `String` | — | OpenClaw Gateway 端点 URL（**必填**） |
-| `openclaw.token` | `String` | — | OpenClaw API 认证令牌 |
-| `openclaw.workspace` | `String` | — | 默认工作空间 ID |
-| `openclaw.auto-register-skill` | `boolean` | `true` | 是否在启动时自动注册技能 |
-| `openclaw.timeout` | `Duration` | `30s` | 请求超时时间 |
-| `openclaw.log-request` | `boolean` | `false` | 是否记录 HTTP 请求日志 |
-| `openclaw.log-response` | `boolean` | `false` | 是否记录 HTTP 响应日志 |
-| `openclaw.callback.path` | `String` | `/openclaw/callback` | 回调端点路径 |
-| `openclaw.callback.enabled` | `boolean` | `true` | 是否启用回调端点 |
-| `openclaw.retry.max-attempts` | `int` | `3` | 最大重试次数 |
-| `openclaw.retry.backoff` | `Duration` | `1s` | 重试间隔时间 |
-| `openclaw.heartbeat.enabled` | `boolean` | `true` | 是否启用心跳 |
-| `openclaw.heartbeat.interval` | `Duration` | `30s` | 心跳间隔 |
-| `openclaw.stream.enabled` | `boolean` | `true` | 是否启用流式传输 |
-| `openclaw.stream.reconnect-delay` | `Duration` | `5s` | 流式连接重连延迟 |
-| `openclaw.trace.enabled` | `boolean` | `false` | 是否启用分布式链路追踪 |
-| `openclaw.trace.exporter` | `String` | `otel` | 追踪数据导出器类型（`otel` 表示 OpenTelemetry） |
+| 配置项                               | 类型         | 默认值                  | 描述                                 |
+|-----------------------------------|------------|----------------------|------------------------------------|
+| `openclaw.endpoint`               | `String`   | —                    | OpenClaw Gateway 端点 URL（**必填**）    |
+| `openclaw.token`                  | `String`   | —                    | OpenClaw API 认证令牌                  |
+| `openclaw.workspace`              | `String`   | —                    | 默认工作空间 ID                          |
+| `openclaw.agent-id`               | `String`   | —                    | 默认对话 Agent ID，用于路由请求到指定 Agent（可选）  |
+| `openclaw.auto-register-skill`    | `boolean`  | `true`               | 是否在启动时自动注册技能                       |
+| `openclaw.timeout`                | `Duration` | `30s`                | 请求超时时间                             |
+| `openclaw.log-request`            | `boolean`  | `false`              | 是否记录 HTTP 请求日志                     |
+| `openclaw.log-response`           | `boolean`  | `false`              | 是否记录 HTTP 响应日志                     |
+| `openclaw.callback.path`          | `String`   | `/openclaw/callback` | 回调端点路径                             |
+| `openclaw.callback.enabled`       | `boolean`  | `true`               | 是否启用回调端点                           |
+| `openclaw.retry.max-attempts`     | `int`      | `3`                  | 最大重试次数                             |
+| `openclaw.retry.backoff`          | `Duration` | `1s`                 | 重试间隔时间                             |
+| `openclaw.heartbeat.enabled`      | `boolean`  | `true`               | 是否启用心跳                             |
+| `openclaw.heartbeat.interval`     | `Duration` | `30s`                | 心跳间隔                               |
+| `openclaw.stream.enabled`         | `boolean`  | `true`               | 是否启用流式传输                           |
+| `openclaw.stream.reconnect-delay` | `Duration` | `5s`                 | 流式连接重连延迟                           |
+| `openclaw.trace.enabled`          | `boolean`  | `false`              | 是否启用分布式链路追踪                        |
+| `openclaw.trace.exporter`         | `String`   | `otel`               | 追踪数据导出器类型（`otel` 表示 OpenTelemetry） |
 
 ## 从源码构建
 

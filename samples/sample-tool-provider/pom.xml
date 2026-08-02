@@ -8,13 +8,17 @@
     <parent>
         <groupId>io.openclaw.runtime</groupId>
         <artifactId>openclaw-runtime-sdk</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>0.0.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>sample-tool-provider</artifactId>
     <name>Sample - OpenClaw Tool Provider</name>
     <description>Sample application demonstrating OpenClaw Tool development with auto-discovery</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>

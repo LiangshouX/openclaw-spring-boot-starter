@@ -8,13 +8,17 @@
     <parent>
         <groupId>io.openclaw.runtime</groupId>
         <artifactId>openclaw-runtime-sdk</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>0.0.1-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>sample-skill-provider</artifactId>
     <name>Sample - OpenClaw Skill (SKILL.md) Provider</name>
     <description>Sample application demonstrating OpenClaw Skill (SKILL.md) loading and management</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>

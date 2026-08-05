@@ -55,13 +55,14 @@ public class OpenClawAutoConfiguration {
         return mapper;
     }
 
-    /** 创建配置了 OpenClaw 端点和认证令牌的 {@link WebClient} Bean。 */
+    /** 创建配置了 OpenClaw 端点、认证令牌和超时时间的 {@link WebClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
     public WebClient openClawWebClient(OpenClawProperties properties) {
         return WebClient.builder()
                 .baseUrl(properties.getEndpoint())
                 .defaultHeader("Authorization", "Bearer " + properties.getToken())
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(16 * 1024 * 1024))
                 .build();
     }
 
@@ -124,8 +125,8 @@ public class OpenClawAutoConfiguration {
     /** 创建用于向 OpenClaw 上传文件的 {@link UploadClient} Bean。 */
     @Bean
     @ConditionalOnMissingBean
-    public UploadClient uploadClient(WebClient openClawWebClient) {
-        return new UploadClient(openClawWebClient);
+    public UploadClient uploadClient(WebClient openClawWebClient, OpenClawProperties properties) {
+        return new UploadClient(openClawWebClient, properties.getUploadMaxSizeBytes());
     }
 
     /** 创建用于管理 OpenClaw 制品的 {@link ArtifactClient} Bean。 */
@@ -145,9 +146,20 @@ public class OpenClawAutoConfiguration {
         String wsEndpoint = properties.getWebsocket().getEndpoint();
         if (wsEndpoint == null || wsEndpoint.isBlank()) {
             // Derive WS endpoint from HTTP endpoint: http→ws, https→wss
-            wsEndpoint = properties.getEndpoint()
-                    .replaceFirst("^https://", "wss://")
-                    .replaceFirst("^http://", "ws://");
+            String httpEndpoint = properties.getEndpoint();
+            if (httpEndpoint.startsWith("http://")) {
+                throw new IllegalStateException(
+                        "OpenClaw endpoint must use HTTPS for secure token transmission. " +
+                        "Current endpoint: " + httpEndpoint +
+                        ". Set openclaw.endpoint to an https:// URL or explicitly configure " +
+                        "openclaw.websocket.endpoint to a wss:// URL.");
+            }
+            wsEndpoint = httpEndpoint
+                    .replaceFirst("^https://", "wss://");
+        } else if (wsEndpoint.startsWith("ws://") && properties.getToken() != null
+                && !properties.getToken().isBlank()) {
+            log.warn("WebSocket endpoint uses unencrypted ws:// with authentication token. " +
+                    "Token transmission is insecure. Consider using wss:// endpoint.");
         }
         return new OpenClawWebSocketClient(
                 wsEndpoint,

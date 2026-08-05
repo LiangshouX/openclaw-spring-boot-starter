@@ -86,9 +86,10 @@ public class DefaultOpenClawRuntime implements OpenClawRuntime {
     /** {@inheritDoc} */
     @Override
     public void registerTool() {
-        log.info("Manual tool registration triggered");
+        log.info("Manual tool registration triggered — building manifest from registry");
         var manifest = toolRegistry.buildManifest();
-        log.info("Built tool manifest with {} tools", manifest.getTools().size());
+        log.info("Built tool manifest with {} tools (actual Gateway registration requires ToolRegistrar)",
+                manifest.getTools().size());
     }
 
     /** {@inheritDoc} */

@@ -2,6 +2,7 @@ package io.openclaw.runtime.autoconfigure;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 import java.time.Duration;
 
@@ -76,6 +77,11 @@ public class OpenClawProperties {
     private boolean autoRegisterSkill = false;
 
     /**
+     * 文件上传大小限制（字节）。默认 50MB。设为 -1 表示不限制。
+     */
+    private long uploadMaxSizeBytes = 50 * 1024 * 1024;
+
+    /**
      * Skill 配置。
      */
     private SkillProperties skill = new SkillProperties();
@@ -144,6 +150,19 @@ public class OpenClawProperties {
          * 是否启用回调端点。
          */
         private boolean enabled = true;
+
+        /**
+         * 回调 HMAC-SHA256 共享密钥。
+         * <p>
+         * 设置后回调端点将验证请求头 {@code X-Signature} 中的 HMAC 签名。
+         * 未设置时回调端点不验证签名（不推荐用于生产环境）。
+         */
+        private String secret;
+
+        /**
+         * HMAC 签名请求头名称。
+         */
+        private String signatureHeader = "X-Signature";
     }
 
     @Data

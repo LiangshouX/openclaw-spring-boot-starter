@@ -9,9 +9,9 @@ import io.openclaw.runtime.tool.registry.ToolManifest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 聊天请求级工具注册策略。
@@ -39,7 +39,7 @@ public class ChatRequestToolStrategy implements ToolRegistrationStrategy {
     private static final String NAME = "chat-request";
 
     private final ObjectMapper objectMapper;
-    private final List<ToolDefinition> registeredTools = new CopyOnWriteArrayList<>();
+    private volatile List<ToolDefinition> registeredTools = Collections.emptyList();
 
     public ChatRequestToolStrategy(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -47,14 +47,19 @@ public class ChatRequestToolStrategy implements ToolRegistrationStrategy {
 
     @Override
     public void register(ToolManifest manifest) {
-        registeredTools.clear();
-        registeredTools.addAll(manifest.getTools());
+        registeredTools = List.copyOf(manifest.getTools());
         log.info("Cached {} tool definitions for chat request injection", manifest.getTools().size());
     }
 
     @Override
     public void unregister(List<String> toolNames) {
-        registeredTools.removeIf(def -> toolNames.contains(def.getName()));
+        List<ToolDefinition> updated = new ArrayList<>();
+        for (ToolDefinition def : registeredTools) {
+            if (!toolNames.contains(def.getName())) {
+                updated.add(def);
+            }
+        }
+        registeredTools = Collections.unmodifiableList(updated);
         log.info("Removed {} tool definitions from chat request cache", toolNames.size());
     }
 

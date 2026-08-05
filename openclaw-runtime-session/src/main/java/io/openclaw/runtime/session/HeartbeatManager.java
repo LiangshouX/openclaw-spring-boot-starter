@@ -42,7 +42,7 @@ public class HeartbeatManager {
                         log.error("Heartbeat failed for session: {}", sessionId, e);
                     }
                 },
-                0,
+                interval.toMillis(),
                 interval.toMillis(),
                 TimeUnit.MILLISECONDS
         );

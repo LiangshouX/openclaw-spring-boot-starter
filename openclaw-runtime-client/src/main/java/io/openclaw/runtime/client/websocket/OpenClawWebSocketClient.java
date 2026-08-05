@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * WebSocket 客户端，实现与 OpenClaw Gateway 的完整 WebSocket 协议通信。
@@ -50,7 +51,7 @@ public class OpenClawWebSocketClient {
 
     // Connection state
     private volatile WebSocketSession session;
-    private volatile ConnectionState state = ConnectionState.DISCONNECTED;
+    private final AtomicReference<ConnectionState> state = new AtomicReference<>(ConnectionState.DISCONNECTED);
     private volatile long tickIntervalMs = 15_000L;
     private final Sinks.Many<String> outbound = Sinks.many().multicast().onBackpressureBuffer();
 
@@ -74,7 +75,7 @@ public class OpenClawWebSocketClient {
     private volatile Sinks.Many<ChatStreamChunk> chatSink = Sinks.many().multicast().onBackpressureBuffer();
 
     enum ConnectionState {
-        DISCONNECTED, CONNECTING, CHALLENGING, AUTHENTICATING, CONNECTED, CLOSING
+        DISCONNECTED, CONNECTING, CHALLENGING, AUTHENTICATING, CONNECTED, CLOSING, ERROR
     }
 
     // ─── Constructors ──────────────────────────────────────────────
@@ -115,7 +116,7 @@ public class OpenClawWebSocketClient {
     }
 
     /** 向后兼容的无参构造函数。 */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public OpenClawWebSocketClient() {
         this(null, null, new ObjectMapper());
     }
@@ -134,18 +135,24 @@ public class OpenClawWebSocketClient {
             return Mono.error(new ClientException(ErrorCode.CONNECTION_REFUSED,
                     "WebSocket endpoint not configured"));
         }
-        if (state == ConnectionState.CONNECTED) {
+        if (state.get() == ConnectionState.CONNECTED) {
             return Mono.empty();
         }
 
+        // CAS: only one thread can transition from DISCONNECTED/ERROR → CONNECTING
+        if (!state.compareAndSet(ConnectionState.DISCONNECTED, ConnectionState.CONNECTING)) {
+            if (!state.compareAndSet(ConnectionState.ERROR, ConnectionState.CONNECTING)) {
+                return Mono.empty(); // Already connecting or in another state
+            }
+        }
+
         return Mono.<Void>create(sink -> {
-            state = ConnectionState.CONNECTING;
             WebSocketClient client = new ReactorNettyWebSocketClient();
             URI uri = URI.create(endpoint);
 
             client.execute(uri, wsSession -> {
                 this.session = wsSession;
-                state = ConnectionState.CHALLENGING;
+                state.set(ConnectionState.CHALLENGING);
 
                 // Process incoming frames, routing each through handleIncomingFrame
                 Mono<Void> incoming = wsSession.receive()
@@ -163,7 +170,7 @@ public class OpenClawWebSocketClient {
             }).subscribe(
                     v -> { /* execute handler completed — connection closed normally */ },
                     error -> {
-                        state = ConnectionState.DISCONNECTED;
+                        state.set(ConnectionState.DISCONNECTED);
                         sink.error(new ClientException(ErrorCode.CONNECTION_REFUSED,
                                 "Failed to connect to " + endpoint, error));
                     }
@@ -183,9 +190,9 @@ public class OpenClawWebSocketClient {
      */
     public Mono<JsonNode> invoke(String method, Object params) {
         return Mono.create(sink -> {
-            if (state != ConnectionState.CONNECTED) {
+            if (state.get() != ConnectionState.CONNECTED) {
                 sink.error(new ClientException(ErrorCode.WEBSOCKET_ERROR,
-                        "WebSocket not connected, current state: " + state));
+                        "WebSocket not connected, current state: " + state.get()));
                 return;
             }
 
@@ -201,10 +208,10 @@ public class OpenClawWebSocketClient {
 
             responseSink.asMono()
                     .timeout(requestTimeout)
+                    .doFinally(signal -> pendingRequests.remove(id))
                     .subscribe(
                             sink::success,
                             error -> {
-                                pendingRequests.remove(id);
                                 if (error instanceof java.util.concurrent.TimeoutException) {
                                     sink.error(new ClientException(ErrorCode.REQUEST_TIMEOUT,
                                             "RPC timeout for method: " + method));
@@ -214,13 +221,16 @@ public class OpenClawWebSocketClient {
                             }
                     );
 
+            // Ensure cleanup if the downstream Mono is cancelled
+            sink.onCancel(() -> pendingRequests.remove(id));
+
             sendFrame(frame);
         });
     }
 
     /** 关闭 WebSocket 连接，清理所有资源。 */
     public void close() {
-        state = ConnectionState.CLOSING;
+        state.set(ConnectionState.CLOSING);
         stopTickTimer();
 
         // Fail all pending requests
@@ -238,7 +248,7 @@ public class OpenClawWebSocketClient {
                     v -> {}, e -> log.debug("Error closing WebSocket session", e));
         }
 
-        state = ConnectionState.DISCONNECTED;
+        state.set(ConnectionState.DISCONNECTED);
         chatSink.tryEmitComplete();
         log.info("WebSocket connection closed");
     }
@@ -249,7 +259,7 @@ public class OpenClawWebSocketClient {
      * @return 连接活跃时返回 {@code true}
      */
     public boolean isConnected() {
-        return state == ConnectionState.CONNECTED && session != null;
+        return state.get() == ConnectionState.CONNECTED && session != null;
     }
 
     /**
@@ -289,7 +299,7 @@ public class OpenClawWebSocketClient {
                 default -> log.warn("Unknown WebSocket frame type: {}", type);
             }
         } catch (Exception e) {
-            log.error("Failed to parse WebSocket frame: {}", text, e);
+            log.error("Failed to parse WebSocket frame", e);
         }
     }
 
@@ -299,7 +309,7 @@ public class OpenClawWebSocketClient {
      * 处理服务器发送的连接挑战，并发送连接请求。
      */
     private void handleChallenge(JsonNode frame) {
-        state = ConnectionState.AUTHENTICATING;
+        state.set(ConnectionState.AUTHENTICATING);
 
         String nonce = null;
         if (frame.has("params") && frame.path("params").has("nonce")) {
@@ -349,10 +359,10 @@ public class OpenClawWebSocketClient {
         String id = frame.path("id").asText("");
 
         // During handshake: handle hello-ok response
-        if (state == ConnectionState.AUTHENTICATING || state == ConnectionState.CHALLENGING) {
+        if (state.get() == ConnectionState.AUTHENTICATING || state.get() == ConnectionState.CHALLENGING) {
             boolean ok = frame.path("ok").asBoolean(false);
             if (ok) {
-                state = ConnectionState.CONNECTED;
+                state.set(ConnectionState.CONNECTED);
                 reconnectAttempt = 0;
 
                 JsonNode payload = frame.path("payload");
@@ -363,13 +373,12 @@ public class OpenClawWebSocketClient {
 
                 JsonNode authNode = payload.path("auth");
                 String grantedRole = authNode.path("role").asText("unknown");
-                JsonNode grantedScopes = authNode.path("scopes");
-                log.info("WebSocket connected: server={}, tickInterval={}ms, role={}, scopes={}",
-                        serverVersion, tickIntervalMs, grantedRole, grantedScopes);
+                log.info("WebSocket connected: server={}, tickInterval={}ms, role={}",
+                        serverVersion, tickIntervalMs, grantedRole);
                 startTickTimer();
                 connectSink.success();
             } else {
-                state = ConnectionState.DISCONNECTED;
+                state.set(ConnectionState.DISCONNECTED);
                 String errorMsg = frame.path("error").path("message")
                         .asText("Authentication failed");
                 connectSink.error(new ClientException(ErrorCode.AUTHENTICATION_FAILED, errorMsg));
@@ -462,9 +471,9 @@ public class OpenClawWebSocketClient {
     }
 
     private void sendFrame(JsonNode frame) {
-        if (session == null || state == ConnectionState.CLOSING
-                || state == ConnectionState.DISCONNECTED) {
-            log.warn("Cannot send frame: not connected (state={})", state);
+        if (session == null || state.get() == ConnectionState.CLOSING
+                || state.get() == ConnectionState.DISCONNECTED) {
+            log.warn("Cannot send frame: not connected (state={})", state.get());
             return;
         }
         try {
@@ -482,7 +491,7 @@ public class OpenClawWebSocketClient {
         long intervalMs = Math.max(tickIntervalMs / 2, 1000);
         tickDisposable = Flux.interval(Duration.ofMillis(intervalMs))
                 .subscribe(tick -> {
-                    if (state == ConnectionState.CONNECTED) {
+                    if (state.get() == ConnectionState.CONNECTED) {
                         ObjectNode tickFrame = objectMapper.createObjectNode();
                         tickFrame.put("type", "req");
                         tickFrame.put("method", "tick");
@@ -502,9 +511,10 @@ public class OpenClawWebSocketClient {
 
     /**
      * 使用指数退避策略进行重连。
+     * 使用 retryWhen 替代递归调用，避免栈溢出风险。
      */
     public Mono<Void> reconnect() {
-        if (state == ConnectionState.CLOSING) {
+        if (state.get() == ConnectionState.CLOSING) {
             return Mono.empty();
         }
         return Mono.defer(() -> {
@@ -515,18 +525,26 @@ public class OpenClawWebSocketClient {
             }
             int delaySec = Math.min(MIN_RECONNECT_DELAY_SEC * (1 << attempt), MAX_RECONNECT_DELAY_SEC);
             log.info("Reconnecting in {}s (attempt {}/{})", delaySec, attempt + 1, maxReconnectAttempts);
-            return Mono.delay(Duration.ofSeconds(delaySec))
-                    .then(connect())
-                    .onErrorResume(e -> reconnect());
-        });
+            return Mono.delay(Duration.ofSeconds(delaySec)).then(connect());
+        }).retryWhen(reactor.util.retry.Retry.backoff(maxReconnectAttempts, Duration.ofSeconds(MIN_RECONNECT_DELAY_SEC))
+                .maxBackoff(Duration.ofSeconds(MAX_RECONNECT_DELAY_SEC))
+                .filter(e -> state.get() != ConnectionState.CLOSING)
+                .onRetryExhaustedThrow((spec, signal) ->
+                        new ClientException(ErrorCode.CONNECTION_REFUSED,
+                                "Max reconnection attempts reached (" + maxReconnectAttempts + ")",
+                                signal.failure())));
     }
 
     // ─── Connection Error/Closed Handlers ───────────────────────────
 
     private void handleConnectionError(Throwable error) {
         log.error("WebSocket connection error", error);
-        boolean wasConnected = (state == ConnectionState.CONNECTED);
-        state = ConnectionState.DISCONNECTED;
+        boolean wasConnected = state.compareAndSet(ConnectionState.CONNECTED, ConnectionState.DISCONNECTED)
+                || state.compareAndSet(ConnectionState.AUTHENTICATING, ConnectionState.DISCONNECTED)
+                || state.compareAndSet(ConnectionState.CHALLENGING, ConnectionState.DISCONNECTED);
+        if (!wasConnected && state.get() != ConnectionState.CLOSING) {
+            state.set(ConnectionState.DISCONNECTED);
+        }
         stopTickTimer();
 
         pendingRequests.forEach((id, responseSink) ->
@@ -534,7 +552,7 @@ public class OpenClawWebSocketClient {
                         "Connection error: " + error.getMessage())));
         pendingRequests.clear();
 
-        if (wasConnected) {
+        if (wasConnected && state.get() != ConnectionState.CLOSING) {
             reconnect().subscribe(
                     v -> {},
                     e -> log.error("Reconnection failed after all attempts", e)
@@ -543,12 +561,14 @@ public class OpenClawWebSocketClient {
     }
 
     private void handleConnectionClosed() {
-        if (state == ConnectionState.CLOSING) {
+        if (state.get() == ConnectionState.CLOSING) {
             return; // Expected close, no action needed
         }
         log.warn("WebSocket connection closed by server");
-        boolean wasConnected = (state == ConnectionState.CONNECTED);
-        state = ConnectionState.DISCONNECTED;
+        boolean wasConnected = state.compareAndSet(ConnectionState.CONNECTED, ConnectionState.DISCONNECTED);
+        if (!wasConnected && state.get() != ConnectionState.CLOSING) {
+            state.set(ConnectionState.DISCONNECTED);
+        }
         stopTickTimer();
 
         pendingRequests.forEach((id, responseSink) ->
@@ -556,7 +576,7 @@ public class OpenClawWebSocketClient {
                         "Connection closed by server")));
         pendingRequests.clear();
 
-        if (wasConnected) {
+        if (wasConnected && state.get() != ConnectionState.CLOSING) {
             reconnect().subscribe(
                     v -> {},
                     e -> log.error("Reconnection failed after all attempts", e)

@@ -156,13 +156,14 @@ public class SkillArchiveBuilder {
      * 对于复杂场景（嵌套对象），可后续替换为 Jackson ObjectMapper。
      */
     @SuppressWarnings("unchecked")
-    private String mapToJson(Map<String, Object> map) {
+    private String mapToJson(Map<?, ?> map) {
         StringBuilder sb = new StringBuilder("{");
         boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
             if (!first) sb.append(", ");
             first = false;
-            sb.append('"').append(escapeJson(entry.getKey())).append("\": ");
+            String key = String.valueOf(entry.getKey());
+            sb.append('"').append(escapeJson(key)).append("\": ");
             appendJsonValue(sb, entry.getValue());
         }
         sb.append('}');
@@ -195,10 +196,26 @@ public class SkillArchiveBuilder {
     }
 
     private String escapeJson(String s) {
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append("\\u").append(String.format("%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 }

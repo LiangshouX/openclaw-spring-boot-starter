@@ -83,7 +83,8 @@ public class SessionManager {
         }
         context.setStatus(SessionStatus.CLOSED);
         context.getSession().setStatus("CLOSED");
-        log.info("Session closed: sessionId={}", sessionId);
+        sessions.remove(sessionId);
+        log.info("Session closed and removed: sessionId={}", sessionId);
     }
 
     /**

@@ -30,7 +30,7 @@ public class OpenClawRuntimeException extends RuntimeException {
      * @param detail    关于错误的附加详细信息
      */
     public OpenClawRuntimeException(ErrorCode errorCode, String detail) {
-        super(detail);
+        super("[" + errorCode.getCode() + "] " + detail);
         this.errorCode = errorCode;
         this.detail = detail;
     }
@@ -55,7 +55,7 @@ public class OpenClawRuntimeException extends RuntimeException {
      * @param cause     底层原因
      */
     public OpenClawRuntimeException(ErrorCode errorCode, String detail, Throwable cause) {
-        super(detail, cause);
+        super("[" + errorCode.getCode() + "] " + detail, cause);
         this.errorCode = errorCode;
         this.detail = detail;
     }

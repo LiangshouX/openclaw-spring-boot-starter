@@ -33,8 +33,11 @@ public class ToolScanner {
 
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
             Object bean = entry.getValue();
-            OpenClawTool annotation = bean.getClass().getAnnotation(OpenClawTool.class);
+            // Search the bean class and its superclasses for the annotation
+            OpenClawTool annotation = findAnnotation(bean.getClass());
             if (annotation == null) {
+                log.debug("Bean '{}' has no @OpenClawTool annotation on class or superclasses, skipping",
+                        entry.getKey());
                 continue;
             }
 
@@ -44,5 +47,17 @@ public class ToolScanner {
         }
 
         return metadataList;
+    }
+
+    private OpenClawTool findAnnotation(Class<?> clazz) {
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            OpenClawTool annotation = current.getAnnotation(OpenClawTool.class);
+            if (annotation != null) {
+                return annotation;
+            }
+            current = current.getSuperclass();
+        }
+        return null;
     }
 }

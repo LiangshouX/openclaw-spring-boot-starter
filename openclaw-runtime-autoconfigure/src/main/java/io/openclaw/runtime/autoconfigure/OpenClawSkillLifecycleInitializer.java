@@ -128,11 +128,20 @@ public class OpenClawSkillLifecycleInitializer implements ApplicationRunner {
         // 这对于打包后的 JAR 文件特别重要
         try {
             var resourceUrl = getClass().getClassLoader().getResource(pathStr);
-            if (resourceUrl != null && "file".equals(resourceUrl.getProtocol())) {
-                Path classpathPath = Paths.get(new URI(resourceUrl.toString()));
-                if (classpathPath.toFile().exists()) {
-                    log.debug("Resolved path from classpath: {} -> {}", pathStr, classpathPath);
-                    return classpathPath;
+            if (resourceUrl != null) {
+                String protocol = resourceUrl.getProtocol();
+                if ("file".equals(protocol)) {
+                    Path classpathPath = Paths.get(new URI(resourceUrl.toString()));
+                    if (classpathPath.toFile().exists()) {
+                        log.debug("Resolved path from classpath: {} -> {}", pathStr, classpathPath);
+                        return classpathPath;
+                    }
+                } else if ("jar".equals(protocol)) {
+                    // JAR 内资源不能转为文件系统路径，返回原始路径并记录警告
+                    log.info("Skill directory '{}' is inside a JAR archive ({}). " +
+                            "JAR-internal skills cannot be loaded via file system scanning. " +
+                            "Consider extracting the skills directory or using an external path.",
+                            pathStr, resourceUrl);
                 }
             }
         } catch (Exception e) {

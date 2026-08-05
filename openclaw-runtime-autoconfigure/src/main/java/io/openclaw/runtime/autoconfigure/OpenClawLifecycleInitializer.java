@@ -60,22 +60,35 @@ public class OpenClawLifecycleInitializer implements ApplicationRunner {
             toolRegistry.registerAll(tools);
             log.info("Found {} tools", tools.size());
 
-            // 生成 Schema
+            // 生成 Schema（单个工具失败不影响其他工具）
             for (ToolMetadata metadata : tools) {
-                var schema = jsonSchemaGenerator.generate(metadata.getTargetClass());
-                metadata.getDefinition().setJsonSchema(schema);
+                try {
+                    var schema = jsonSchemaGenerator.generate(metadata.getTargetClass());
+                    metadata.getDefinition().setJsonSchema(schema);
+                } catch (Exception e) {
+                    log.error("Failed to generate schema for tool '{}', skipping",
+                            metadata.getDefinition().getName(), e);
+                }
             }
 
             // 注册到 OpenClaw
-            var manifest = toolRegistry.buildManifest();
-            toolRegistrar.registerToOpenClaw(manifest);
+            try {
+                var manifest = toolRegistry.buildManifest();
+                toolRegistrar.registerToOpenClaw(manifest);
+            } catch (Exception e) {
+                log.error("Tool registration to OpenClaw failed — tools available locally only", e);
+            }
         }
 
-        // 发布 RuntimeStartedEvent
-        RuntimeStartedEvent event = new RuntimeStartedEvent();
-        event.setRuntimeId("openclaw-runtime");
-        event.setEndpoint(properties.getEndpoint());
-        eventPublisher.publish(event);
+        // 发布 RuntimeStartedEvent（始终发布，即使工具注册失败）
+        try {
+            RuntimeStartedEvent event = new RuntimeStartedEvent();
+            event.setRuntimeId("openclaw-runtime");
+            event.setEndpoint(properties.getEndpoint());
+            eventPublisher.publish(event);
+        } catch (Exception e) {
+            log.error("Failed to publish RuntimeStartedEvent", e);
+        }
 
         log.info("OpenClaw Runtime initialized successfully");
     }

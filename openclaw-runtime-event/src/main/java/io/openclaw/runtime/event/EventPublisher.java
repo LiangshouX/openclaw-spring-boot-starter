@@ -38,34 +38,39 @@ public class EventPublisher {
         log.debug("Publishing event: {}", event.getClass().getSimpleName());
 
         for (RuntimeListener listener : listeners) {
-            if (event instanceof RuntimeStartedEvent e) {
-                listener.onRuntimeStarted(e);
-            } else if (event instanceof RuntimeStoppedEvent e) {
-                listener.onRuntimeStopped(e);
-            } else if (event instanceof SessionCreatedEvent e) {
-                listener.onSessionCreated(e);
-            } else if (event instanceof SessionClosedEvent e) {
-                listener.onSessionClosed(e);
-            } else if (event instanceof TaskStartedEvent e) {
-                listener.onTaskStarted(e);
-            } else if (event instanceof TaskFinishedEvent e) {
-                listener.onTaskFinished(e);
-            } else if (event instanceof TaskFailedEvent e) {
-                listener.onTaskFailed(e);
-            } else if (event instanceof ToolCallingEvent e) {
-                listener.onToolCalling(e);
-            } else if (event instanceof ToolFinishedEvent e) {
-                listener.onToolFinished(e);
-            } else if (event instanceof ArtifactCreatedEvent e) {
-                listener.onArtifactCreated(e);
-            } else if (event instanceof ReasoningEvent e) {
-                listener.onReasoning(e);
-            } else if (event instanceof StreamingEvent e) {
-                listener.onStreaming(e);
-            } else if (event instanceof ErrorEvent e) {
-                listener.onError(e);
-            } else {
-                log.warn("Unknown event type: {}", event.getClass().getSimpleName());
+            try {
+                if (event instanceof RuntimeStartedEvent e) {
+                    listener.onRuntimeStarted(e);
+                } else if (event instanceof RuntimeStoppedEvent e) {
+                    listener.onRuntimeStopped(e);
+                } else if (event instanceof SessionCreatedEvent e) {
+                    listener.onSessionCreated(e);
+                } else if (event instanceof SessionClosedEvent e) {
+                    listener.onSessionClosed(e);
+                } else if (event instanceof TaskStartedEvent e) {
+                    listener.onTaskStarted(e);
+                } else if (event instanceof TaskFinishedEvent e) {
+                    listener.onTaskFinished(e);
+                } else if (event instanceof TaskFailedEvent e) {
+                    listener.onTaskFailed(e);
+                } else if (event instanceof ToolCallingEvent e) {
+                    listener.onToolCalling(e);
+                } else if (event instanceof ToolFinishedEvent e) {
+                    listener.onToolFinished(e);
+                } else if (event instanceof ArtifactCreatedEvent e) {
+                    listener.onArtifactCreated(e);
+                } else if (event instanceof ReasoningEvent e) {
+                    listener.onReasoning(e);
+                } else if (event instanceof StreamingEvent e) {
+                    listener.onStreaming(e);
+                } else if (event instanceof ErrorEvent e) {
+                    listener.onError(e);
+                } else {
+                    log.warn("Unknown event type: {}", event.getClass().getSimpleName());
+                }
+            } catch (Exception e) {
+                log.error("Listener {} failed to handle event {}",
+                        listener.getClass().getSimpleName(), event.getClass().getSimpleName(), e);
             }
         }
     }

@@ -21,8 +21,8 @@ public class ToolRegistry {
      */
     public void register(ToolMetadata metadata) {
         String toolName = metadata.getDefinition().getName();
-        tools.put(toolName, metadata);
         metadata.setRegistered(true);
+        tools.put(toolName, metadata);
     }
 
     /**

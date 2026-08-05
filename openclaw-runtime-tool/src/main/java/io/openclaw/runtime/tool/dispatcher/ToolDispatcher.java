@@ -40,33 +40,57 @@ public class ToolDispatcher {
                     "Tool not found: " + toolName);
         }
 
-        long startTime = System.currentTimeMillis();
+        long startTime = System.nanoTime();
 
-        try {
-            // Execute beforeToolCall interceptors
-            for (LifecycleInterceptor interceptor : interceptors) {
+        // Execute beforeToolCall interceptors with isolation
+        for (LifecycleInterceptor interceptor : interceptors) {
+            try {
                 interceptor.beforeToolCall(toolName, arguments);
+            } catch (Exception e) {
+                throw new ToolException(ErrorCode.TOOL_INVOCATION_FAILED,
+                        "Interceptor beforeToolCall failed for tool: " + toolName, e);
             }
+        }
 
+        ToolResult toolResult;
+        try {
             // Invoke the tool via reflection
             Object result = metadata.getInvokeMethod().invoke(metadata.getTargetBean(), arguments);
-            ToolResult toolResult = (ToolResult) result;
-
-            // Execute afterToolCall interceptors
-            for (LifecycleInterceptor interceptor : interceptors) {
-                interceptor.afterToolCall(toolName, toolResult);
+            if (result instanceof ToolResult tr) {
+                toolResult = tr;
+            } else if (result == null) {
+                toolResult = ToolResult.failure(toolName, "Tool returned null");
+            } else {
+                toolResult = ToolResult.failure(toolName,
+                        "Tool returned unexpected type: " + result.getClass().getName());
             }
-
-            long executionTime = System.currentTimeMillis() - startTime;
-            log.info("Tool '{}' dispatched successfully in {}ms", toolName, executionTime);
-
-            return toolResult;
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            long executionMs = (System.nanoTime() - startTime) / 1_000_000;
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            log.error("Tool '{}' invocation failed after {}ms", toolName, executionMs, cause);
+            throw new ToolException(ErrorCode.TOOL_INVOCATION_FAILED,
+                    "Failed to invoke tool: " + toolName, cause);
         } catch (Exception e) {
-            long executionTime = System.currentTimeMillis() - startTime;
-            log.error("Tool '{}' invocation failed after {}ms", toolName, executionTime, e);
+            long executionMs = (System.nanoTime() - startTime) / 1_000_000;
+            log.error("Tool '{}' invocation failed after {}ms", toolName, executionMs, e);
             throw new ToolException(ErrorCode.TOOL_INVOCATION_FAILED,
                     "Failed to invoke tool: " + toolName, e);
         }
+
+        // Execute afterToolCall interceptors with isolation
+        for (LifecycleInterceptor interceptor : interceptors) {
+            try {
+                interceptor.afterToolCall(toolName, toolResult);
+            } catch (Exception e) {
+                log.error("Interceptor afterToolCall failed for tool '{}': {}",
+                        toolName, e.getMessage(), e);
+            }
+        }
+
+        long executionMs = (System.nanoTime() - startTime) / 1_000_000;
+        log.info("Tool '{}' dispatched successfully in {}ms", toolName, executionMs);
+
+        return toolResult;
     }
 
     /**

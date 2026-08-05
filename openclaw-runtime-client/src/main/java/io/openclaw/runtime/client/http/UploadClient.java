@@ -22,11 +22,18 @@ public class UploadClient {
 
     private static final Logger log = LoggerFactory.getLogger(UploadClient.class);
     private static final String UPLOAD_PATH = "/v1/files";
+    private static final long DEFAULT_MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
     private final WebClient webClient;
+    private final long maxUploadSizeBytes;
 
     public UploadClient(WebClient webClient) {
+        this(webClient, DEFAULT_MAX_UPLOAD_SIZE);
+    }
+
+    public UploadClient(WebClient webClient, long maxUploadSizeBytes) {
         this.webClient = webClient;
+        this.maxUploadSizeBytes = maxUploadSizeBytes;
     }
 
     /**
@@ -40,6 +47,11 @@ public class UploadClient {
      * @throws ClientException 当上传失败时
      */
     public JsonNode upload(String sessionId, String fileName, byte[] content, String contentType) {
+        if (maxUploadSizeBytes > 0 && content.length > maxUploadSizeBytes) {
+            throw new ClientException(ErrorCode.HTTP_ERROR,
+                    "File size " + content.length + " bytes exceeds maximum allowed size of "
+                            + maxUploadSizeBytes + " bytes");
+        }
         try {
             log.debug("Uploading file '{}' ({} bytes) to session {}", fileName,
                     content.length, sessionId);

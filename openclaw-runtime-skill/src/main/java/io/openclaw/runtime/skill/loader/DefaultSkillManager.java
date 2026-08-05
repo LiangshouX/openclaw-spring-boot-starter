@@ -131,9 +131,10 @@ public class DefaultSkillManager implements SkillManager {
 
     /**
      * 清空所有已加载的 Skill 和禁用列表。
+     * 先清空禁用列表再清空 Skill，避免中间状态被并发读取看到。
      */
     public void clear() {
-        skills.clear();
         disabledSkills.clear();
+        skills.clear();
     }
 }

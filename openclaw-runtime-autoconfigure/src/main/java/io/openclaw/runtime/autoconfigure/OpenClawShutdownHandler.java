@@ -48,35 +48,51 @@ public class OpenClawShutdownHandler implements DisposableBean {
         log.info("Shutting down OpenClaw Runtime...");
 
         // 关闭活跃会话
-        List<RuntimeSession> activeSessions = sessionManager.getActiveSessions();
-        for (RuntimeSession session : activeSessions) {
-            try {
-                sessionManager.close(session.getSessionId());
-                log.debug("Closed session: {}", session.getSessionId());
-            } catch (Exception e) {
-                log.warn("Failed to close session: {}", session.getSessionId(), e);
+        try {
+            List<RuntimeSession> activeSessions = sessionManager.getActiveSessions();
+            for (RuntimeSession session : activeSessions) {
+                try {
+                    sessionManager.close(session.getSessionId());
+                    log.debug("Closed session: {}", session.getSessionId());
+                } catch (Exception e) {
+                    log.warn("Failed to close session: {}", session.getSessionId(), e);
+                }
             }
+        } catch (Exception e) {
+            log.error("Failed to enumerate active sessions during shutdown", e);
         }
 
         // 注销工具（仅当 ToolRegistrar 可用时）
         if (toolRegistrar != null) {
-            List<String> toolNames = toolRegistry.getAll().stream()
-                    .map(ToolMetadata::getDefinition)
-                    .map(d -> d.getName())
-                    .collect(Collectors.toList());
-            if (!toolNames.isEmpty()) {
-                toolRegistrar.unregisterFromOpenClaw(toolNames);
+            try {
+                List<String> toolNames = toolRegistry.getAll().stream()
+                        .map(ToolMetadata::getDefinition)
+                        .map(d -> d.getName())
+                        .collect(Collectors.toList());
+                if (!toolNames.isEmpty()) {
+                    toolRegistrar.unregisterFromOpenClaw(toolNames);
+                }
+            } catch (Exception e) {
+                log.error("Failed to unregister tools during shutdown — continuing cleanup", e);
             }
         }
 
         // 关闭心跳
-        heartbeatManager.shutdown();
+        try {
+            heartbeatManager.shutdown();
+        } catch (Exception e) {
+            log.error("Failed to shutdown heartbeat manager", e);
+        }
 
         // 发布 RuntimeStoppedEvent
-        RuntimeStoppedEvent event = new RuntimeStoppedEvent();
-        event.setRuntimeId("openclaw-runtime");
-        event.setReason("Application shutdown");
-        eventPublisher.publish(event);
+        try {
+            RuntimeStoppedEvent event = new RuntimeStoppedEvent();
+            event.setRuntimeId("openclaw-runtime");
+            event.setReason("Application shutdown");
+            eventPublisher.publish(event);
+        } catch (Exception e) {
+            log.error("Failed to publish RuntimeStoppedEvent", e);
+        }
 
         log.info("OpenClaw Runtime shut down successfully");
     }
